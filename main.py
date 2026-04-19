@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from config import CANVAS_HEIGHT, CANVAS_WIDTH, SHOW_WEBCAM_UNDERLAY, UNDERLAY_ALPHA
+from hand_detector import HandDetector
 from particle_system import ParticleSystem
 from silhouette import SilhouetteDetector
 
@@ -47,15 +48,19 @@ def main():
     cap = open_webcam()
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, CANVAS_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CANVAS_HEIGHT)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
+    hand_detector = None
     silhouette_detector = None
     particle_system = None
     previous_time = time.perf_counter()
+    canvas = np.empty((CANVAS_HEIGHT, CANVAS_WIDTH, 3), dtype=np.uint8)
 
     cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
     cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     try:
+        hand_detector = HandDetector()
         silhouette_detector = SilhouetteDetector()
         particle_system = ParticleSystem()
 
@@ -64,20 +69,23 @@ def main():
             if not success:
                 break
 
-            frame = cv2.resize(frame, (CANVAS_WIDTH, CANVAS_HEIGHT))
+            frame = cv2.flip(frame, 1)
+            if frame.shape[1] != CANVAS_WIDTH or frame.shape[0] != CANVAS_HEIGHT:
+                frame = cv2.resize(frame, (CANVAS_WIDTH, CANVAS_HEIGHT), interpolation=cv2.INTER_LINEAR)
             mask = silhouette_detector.get_mask(frame)
-            particle_system.update(mask)
+            hands = hand_detector.get_hands(frame)
+            particle_system.update(mask, hands=hands)
 
-            canvas = np.full((CANVAS_HEIGHT, CANVAS_WIDTH, 3), BACKGROUND_COLOR, dtype=np.uint8)
+            canvas[:] = BACKGROUND_COLOR
 
             if SHOW_WEBCAM_UNDERLAY:
-                underlay = cv2.resize(frame, (CANVAS_WIDTH, CANVAS_HEIGHT))
-                canvas = cv2.addWeighted(
-                    underlay,
+                cv2.addWeighted(
+                    frame,
                     UNDERLAY_ALPHA,
                     canvas,
                     1.0 - UNDERLAY_ALPHA,
                     0.0,
+                    dst=canvas,
                 )
 
             particle_system.draw(canvas)
@@ -103,6 +111,8 @@ def main():
                 break
     finally:
         cap.release()
+        if hand_detector is not None:
+            hand_detector.close()
         if silhouette_detector is not None:
             silhouette_detector.close()
         cv2.destroyAllWindows()
