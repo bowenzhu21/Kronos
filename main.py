@@ -4,28 +4,14 @@ import time
 import cv2
 import numpy as np
 
-from avatar import draw_avatar, reset_avatar_motion
-from config import (
-    CANVAS_HEIGHT,
-    CANVAS_WIDTH,
-    DEFAULT_CAMERA_INDICES,
-    FLIP_CAMERA_VIEW,
-    LEFT_ANKLE,
-    LEFT_ELBOW,
-    LEFT_HIP,
-    LEFT_KNEE,
-    LEFT_SHOULDER,
-    LEFT_WRIST,
-    NOSE,
-    RIGHT_ANKLE,
-    RIGHT_ELBOW,
-    RIGHT_HIP,
-    RIGHT_KNEE,
-    RIGHT_SHOULDER,
-    RIGHT_WRIST,
-)
-from mirror import mirror_landmarks, reset_mirror_smoothing
-from pose_detector import PoseDetector
+from config import CANVAS_HEIGHT, CANVAS_WIDTH, SHOW_WEBCAM_UNDERLAY, UNDERLAY_ALPHA
+from particle_system import ParticleSystem
+from silhouette import SilhouetteDetector
+
+DEFAULT_CAMERA_INDICES = (0, 1, 2)
+BACKGROUND_COLOR = (15, 14, 12)
+FPS_COLOR = (80, 80, 75)
+WINDOW_NAME = "Dust"
 
 
 def get_camera_indices():
@@ -53,39 +39,25 @@ def open_webcam():
     raise RuntimeError(
         "Unable to open webcam. On macOS, grant camera access to your terminal "
         "app in System Settings > Privacy & Security > Camera, then fully quit "
-        "and reopen the terminal before running again. If Continuity Camera is "
-        "taking over, try MIRROR_TRACKER_CAMERA_INDEX=1 python main.py or turn "
-        "off Continuity Camera on your iPhone."
+        "and reopen the terminal before running again."
     )
-
-
-def create_idle_pose_canvas():
-    center_x = CANVAS_WIDTH // 2
-    idle_landmarks = {
-        NOSE: (center_x, 85),
-        LEFT_SHOULDER: (center_x - 55, 155),
-        RIGHT_SHOULDER: (center_x + 55, 155),
-        LEFT_ELBOW: (center_x - 75, 220),
-        RIGHT_ELBOW: (center_x + 75, 220),
-        LEFT_WRIST: (center_x - 70, 290),
-        RIGHT_WRIST: (center_x + 70, 290),
-        LEFT_HIP: (center_x - 35, 270),
-        RIGHT_HIP: (center_x + 35, 270),
-        LEFT_KNEE: (center_x - 30, 365),
-        RIGHT_KNEE: (center_x + 30, 365),
-        LEFT_ANKLE: (center_x - 25, 450),
-        RIGHT_ANKLE: (center_x + 25, 450),
-    }
-    return draw_avatar(idle_landmarks)
 
 
 def main():
     cap = open_webcam()
-    pose_detector = None
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, CANVAS_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CANVAS_HEIGHT)
+
+    silhouette_detector = None
+    particle_system = None
     previous_time = time.perf_counter()
 
+    cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
     try:
-        pose_detector = PoseDetector()
+        silhouette_detector = SilhouetteDetector()
+        particle_system = ParticleSystem()
 
         while True:
             success, frame = cap.read()
@@ -93,46 +65,46 @@ def main():
                 break
 
             frame = cv2.resize(frame, (CANVAS_WIDTH, CANVAS_HEIGHT))
-            landmarks = pose_detector.detect(frame)
-            display_frame = cv2.flip(frame, 1) if FLIP_CAMERA_VIEW else frame.copy()
+            mask = silhouette_detector.get_mask(frame)
+            particle_system.update(mask)
 
-            if landmarks is not None:
-                mapped_landmarks = mirror_landmarks(landmarks)
-                if mapped_landmarks:
-                    avatar_canvas = draw_avatar(mapped_landmarks)
-                else:
-                    reset_mirror_smoothing()
-                    reset_avatar_motion()
-                    avatar_canvas = create_idle_pose_canvas()
-            else:
-                reset_mirror_smoothing()
-                reset_avatar_motion()
-                avatar_canvas = create_idle_pose_canvas()
+            canvas = np.full((CANVAS_HEIGHT, CANVAS_WIDTH, 3), BACKGROUND_COLOR, dtype=np.uint8)
+
+            if SHOW_WEBCAM_UNDERLAY:
+                underlay = cv2.resize(frame, (CANVAS_WIDTH, CANVAS_HEIGHT))
+                canvas = cv2.addWeighted(
+                    underlay,
+                    UNDERLAY_ALPHA,
+                    canvas,
+                    1.0 - UNDERLAY_ALPHA,
+                    0.0,
+                )
+
+            particle_system.draw(canvas)
 
             current_time = time.perf_counter()
             fps = 1.0 / max(current_time - previous_time, 1e-6)
             previous_time = current_time
 
             cv2.putText(
-                display_frame,
+                canvas,
                 f"FPS: {fps:.1f}",
-                (10, 30),
+                (16, 34),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
-                (0, 255, 0),
+                FPS_COLOR,
                 2,
                 cv2.LINE_AA,
             )
 
-            combined_view = np.hstack((display_frame, avatar_canvas))
-            cv2.imshow("Mirror Tracker", combined_view)
+            cv2.imshow(WINDOW_NAME, canvas)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     finally:
         cap.release()
-        if pose_detector is not None:
-            pose_detector.close()
+        if silhouette_detector is not None:
+            silhouette_detector.close()
         cv2.destroyAllWindows()
 
 
