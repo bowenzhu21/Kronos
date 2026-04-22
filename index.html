@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f0e0c" />
+    <title>Kronos</title>
+  </head>
+  <body>
+    <main id="app">
+      <video id="camera" playsinline muted></video>
+      <canvas id="scene" aria-label="Kronos particle mirror"></canvas>
+
+      <section class="toolbar" aria-label="Controls">
+        <button id="cameraButton" class="button button-primary" type="button">Start</button>
+        <button id="pauseButton" class="button" type="button" disabled>Pause</button>
+
+        <label class="toggle">
+          <input id="underlayToggle" type="checkbox" />
+          <span>Webcam</span>
+        </label>
+
+        <label class="range-control">
+          <span>Particles</span>
+          <input id="particleCount" type="range" min="3000" max="12000" step="500" value="9000" />
+        </label>
+
+        <select id="cameraSelect" class="select" aria-label="Camera"></select>
+        <output id="status" class="status">Ready</output>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

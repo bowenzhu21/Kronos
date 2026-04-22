@@ -45,11 +45,13 @@ class ParticleSystem:
         self._settle_return_force = 0.05
         self._micro_drift_strength = 0.02
         self._rim_light_color = np.array((255, 250, 240), dtype=np.uint8)
-        self._hand_charge_rate = 0.045
-        self._max_hand_charge = 1.8
-        self._gather_radius_gain = 2.35
-        self._gather_pull_gain = 2.9
-        self._gather_velocity_damp = 0.24
+        self._hand_charge_rate = 0.026
+        self._max_hand_charge = 2.4
+        self._max_blast_charge = 1.8
+        self._gather_radius_multiplier = 1.18
+        self._gather_radius_exponent = 1.45
+        self._gather_softening_gain = 1.15
+        self._gather_field_floor = 0.18
         self._burst_duration = 12
         self._burst_radius_gain = 520.0
         self._burst_force_gain = 5.5
@@ -189,27 +191,43 @@ class ParticleSystem:
                 if hand["is_closed"]:
                     charge = min(previous_charge + self._hand_charge_rate, self._max_hand_charge)
                     self._hand_charge[label] = charge
-                    gather_radius = HAND_GATHER_RADIUS * (1.0 + (charge * self._gather_radius_gain))
-                    gather_scale = np.clip((gather_radius - distance) / gather_radius, 0.0, 1.0)
-                    gather_scale = gather_scale.astype(np.float32) ** 2.35
-                    gather_strength = HAND_GATHER_STRENGTH * (0.85 + (charge * self._gather_pull_gain))
+                    charge_ratio = np.clip(charge / self._max_hand_charge, 0.0, 1.0)
+                    max_gather_radius = (
+                        np.hypot(CANVAS_WIDTH, CANVAS_HEIGHT) * self._gather_radius_multiplier
+                    )
+                    gather_radius = HAND_GATHER_RADIUS + (
+                        (max_gather_radius - HAND_GATHER_RADIUS)
+                        * (charge_ratio ** self._gather_radius_exponent)
+                    )
+                    front_width = max(HAND_GATHER_RADIUS * 0.5, gather_radius * 0.18)
+                    field_activation = np.clip((gather_radius - distance) / front_width, 0.0, 1.0)
+                    field_activation = field_activation * field_activation * (3.0 - (2.0 * field_activation))
+                    softening = HAND_GATHER_RADIUS * (1.0 + (charge * self._gather_softening_gain))
+                    near_weight = (softening * softening) / ((distance * distance) + (softening * softening))
+                    minimum_pull = self._gather_field_floor * charge_ratio * charge_ratio
+                    gather_scale = (field_activation * np.maximum(near_weight, minimum_pull)).astype(np.float32)
+                    gather_strength = HAND_GATHER_STRENGTH * (
+                        0.7 + (charge * 1.15) + (charge * charge * 0.38)
+                    )
                     self.vx += (dx / safe_distance) * gather_strength * gather_scale
                     self.vy += (dy / safe_distance) * gather_strength * gather_scale
+
+                    # Held fists expand into a field-wide pull; nearby particles still feel it first.
                     local_damping = np.clip(
-                        gather_scale * (0.08 + (charge * self._gather_velocity_damp)),
+                        field_activation * near_weight * (0.08 + (charge * 0.18)),
                         0.0,
-                        0.42,
+                        0.44,
                     )
                     self.vx *= 1.0 - local_damping
                     self.vy *= 1.0 - local_damping
                     self.energy = np.clip(
-                        self.energy + (gather_scale * HAND_ENERGY_BOOST * (0.75 + (charge * 0.95))),
+                        self.energy + (gather_scale * HAND_ENERGY_BOOST * (0.5 + (charge * 0.55))),
                         0.0,
                         1.45,
                     )
 
                 if hand["just_opened"]:
-                    blast_charge = max(previous_charge, 0.4)
+                    blast_charge = max(min(previous_charge, self._max_blast_charge), 0.4)
                     blast_radius = HAND_BLAST_RADIUS + (blast_charge * self._burst_radius_gain)
                     blast_scale = np.clip((blast_radius - distance) / blast_radius, 0.0, 1.0)
                     blast_scale = np.sqrt(blast_scale.astype(np.float32))

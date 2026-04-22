@@ -1,0 +1,163 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #0f0e0c;
+  color: #f5f0e6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(38, 67, 70, 0.26), transparent 34%),
+    radial-gradient(circle at 88% 80%, rgba(104, 74, 40, 0.24), transparent 32%),
+    #0f0e0c;
+}
+
+#app {
+  position: relative;
+}
+
+#camera {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#scene {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+.toolbar {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px;
+  border: 1px solid rgba(245, 240, 230, 0.12);
+  border-radius: 8px;
+  background: rgba(13, 13, 12, 0.74);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(18px);
+}
+
+.button,
+.select,
+.toggle,
+.range-control,
+.status {
+  height: 34px;
+  border: 1px solid rgba(245, 240, 230, 0.14);
+  border-radius: 7px;
+  background: rgba(245, 240, 230, 0.07);
+  color: #f7f1e8;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.button {
+  min-width: 72px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.button-primary {
+  border-color: rgba(255, 244, 225, 0.28);
+  background: #f1dfbb;
+  color: #17130d;
+  font-weight: 650;
+}
+
+.button:not(:disabled):hover,
+.select:hover,
+.toggle:hover {
+  border-color: rgba(255, 244, 225, 0.32);
+}
+
+.toggle,
+.range-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.toggle input {
+  accent-color: #f1dfbb;
+}
+
+.range-control input {
+  width: min(18vw, 180px);
+  min-width: 92px;
+  accent-color: #f1dfbb;
+}
+
+.select {
+  min-width: 160px;
+  max-width: 28vw;
+  padding: 0 9px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  margin-left: auto;
+  padding: 0 10px;
+  color: #b9cfc9;
+}
+
+.status[data-level="error"] {
+  color: #ffc6ba;
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .button {
+    flex: 1 1 86px;
+  }
+
+  .toggle,
+  .range-control,
+  .select,
+  .status {
+    flex: 1 1 145px;
+  }
+
+  .range-control input {
+    width: 100%;
+  }
+}
