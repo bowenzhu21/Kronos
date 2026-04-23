@@ -13,7 +13,7 @@ const HAND_LANDMARKER_MODEL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task";
 
 const CONFIG = {
-  background: [15, 14, 12],
+  backgroundOverlay: [5, 6, 9, 0.2],
   baseColor: [210, 210, 200],
   disturbedColor: [240, 235, 220],
   hotColor: [255, 244, 225],
@@ -52,7 +52,7 @@ const elements = {
   status: document.querySelector("#status"),
 };
 
-const ctx = elements.canvas.getContext("2d", { alpha: false });
+const ctx = elements.canvas.getContext("2d", { alpha: true });
 
 let stream = null;
 let vision = null;
@@ -753,7 +753,9 @@ function analyzeMask(mask) {
 }
 
 function drawFrame() {
-  ctx.fillStyle = `rgb(${CONFIG.background[0]}, ${CONFIG.background[1]}, ${CONFIG.background[2]})`;
+  const [red, green, blue, alpha] = CONFIG.backgroundOverlay;
+  ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+  ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
   ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
 
   if (

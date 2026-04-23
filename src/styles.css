@@ -22,8 +22,8 @@ body,
 
 body {
   background:
-    radial-gradient(circle at 18% 12%, rgba(38, 67, 70, 0.26), transparent 34%),
-    radial-gradient(circle at 88% 80%, rgba(104, 74, 40, 0.24), transparent 32%),
+    linear-gradient(rgba(4, 6, 10, 0.12), rgba(4, 6, 10, 0.28)),
+    url("/kronos-background.png") center center / cover no-repeat fixed,
     #0f0e0c;
 }
 
@@ -43,6 +43,7 @@ body {
   display: block;
   width: 100vw;
   height: 100vh;
+  background: transparent;
 }
 
 .toolbar {
