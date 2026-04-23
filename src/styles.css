@@ -46,6 +46,18 @@ body {
   background: transparent;
 }
 
+.gesture-hint {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  margin-left: auto;
+  color: rgba(255, 244, 225, 0.86);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
 .toolbar {
   position: fixed;
   left: max(16px, env(safe-area-inset-left));
@@ -132,7 +144,6 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 92px;
-  margin-left: auto;
   padding: 0 10px;
   color: #b9cfc9;
 }
@@ -154,8 +165,14 @@ body {
   .toggle,
   .range-control,
   .select,
+  .gesture-hint,
   .status {
     flex: 1 1 145px;
+  }
+
+  .gesture-hint {
+    margin-left: 0;
+    justify-content: center;
   }
 
   .range-control input {
